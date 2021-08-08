@@ -1,31 +1,51 @@
 package com.sandipan;
 
 import java.io.*;
+import java.nio.file.FileSystems;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
 
 
 public class Locations implements Map<Integer, Location> {
-    private static Map<Integer, Location> locations = new LinkedHashMap<Integer, Location>();
+    private static final Map<Integer, Location> locations = new LinkedHashMap<>();
 
     public static void main(String[] args) throws IOException {
-        try (ObjectOutputStream locFile = new ObjectOutputStream(new BufferedOutputStream(
-                new FileOutputStream(FilesName.BUFFERED_WRITTEN_LOCATION_OBJECT)))) {
-            for(Location location : locations.values()) {
-                locFile.writeObject(location);
+
+        Path locationPath = FileSystems.getDefault().getPath(
+                FilesName.LOCATIONS);
+        Path directionsPath = FileSystems.getDefault().getPath(
+                FilesName.DIRECTIONS
+        );
+
+        try (BufferedWriter locationWriter = Files.newBufferedWriter(locationPath);
+             BufferedWriter directionWriter = Files.newBufferedWriter(directionsPath)) {
+
+            for (Location location : locations.values()) {
+                locationWriter.write(location.getLocationID() +
+                        "," +
+                        location.getDescription() +
+                        "\n");
+
+                for (String direction : location.getExits().keySet()) {
+                    if (!direction.equalsIgnoreCase("Q")) {
+                        directionWriter.write(
+                                location.getLocationID() +
+                                        "," +
+                                        location.getExits().get(direction) +
+                                        "\n"
+                        );
+                    }
+                }
+
             }
         }
-
     }
-
-    // 1. This first four bytes will contain the number of locations (bytes 0-3)
-    // 2. The next four bytes will contain the start offset of the locations section (bytes 4-7)
-    // 3. The next section of the file will contain the index (the index is 1692 bytes long.  It will start at byte 8 and end at byte 1699
-    // 4. The final section of the file will contain the location records (the data). It will start at byte 1700
 
 
     static {
 
-        try(ObjectInputStream locFile = new ObjectInputStream(new BufferedInputStream(new FileInputStream(
+        try (ObjectInputStream locFile = new ObjectInputStream(new BufferedInputStream(new FileInputStream(
                 FilesName.BUFFERED_WRITTEN_LOCATION_OBJECT)))) {
             boolean eof = false;
             while (!eof) {
@@ -39,11 +59,11 @@ public class Locations implements Map<Integer, Location> {
                     eof = true;
                 }
             }
-        } catch(InvalidClassException e) {
+        } catch (InvalidClassException e) {
             System.out.println("InvalidClassException " + e.getMessage());
-        } catch(IOException io) {
+        } catch (IOException io) {
             System.out.println("IO Exception " + io.getMessage());
-        } catch(ClassNotFoundException e) {
+        } catch (ClassNotFoundException e) {
             System.out.println("ClassNotFoundException " + e.getMessage());
         }
     }
