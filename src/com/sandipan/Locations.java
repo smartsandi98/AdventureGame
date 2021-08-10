@@ -4,10 +4,56 @@ import java.io.*;
 import java.util.*;
 
 public class Locations implements Map<Integer, Location> {
+
     private static final Map<Integer, Location> LOCATIONS = new LinkedHashMap<>();
 
-    public static void main(String[] args) throws IOException, FileNotFoundException {
+    public static void main(String[] args) throws IOException {
 
+
+        //storing the whole objects using serialization.The process of translating the object to format that can be
+        //stored is called serialization. serialVersionUID is a sort of class version serialization id. It checked in
+        //runtime,if the stored serialized id is not matched with the compiled class serialVersionUID then
+        //InvalidClassException is thrown because of compatibility issue.
+        try (ObjectOutputStream locFile = new ObjectOutputStream(
+                new BufferedOutputStream(
+                        new FileOutputStream(FilesName.BUFFERED_WRITTEN_LOCATION_OBJECT)
+                ))) {
+            for (Location location :
+                    LOCATIONS.values()) {
+                locFile.writeObject(location);
+            }
+        }
+
+
+
+/*======================================================================================================================
+
+//writing using byte stream.FileOutputStream class provide out put stream and BufferedOutputStream buffered the bytes
+//in memory until the buffer is full.These 2 class provide raw byte stream output.using byte stream class we do not have
+//to parse the bytes into various data types because byte stream itself can be used to read or write any primitive types.
+//DataOutputStream provide some methods to write and read bytes.
+
+        try (DataOutputStream locFile = new DataOutputStream(new BufferedOutputStream(new FileOutputStream("locations.dat")))) {
+            for (Location location : LOCATIONS.values()) {
+                locFile.writeInt(location.getLocationID());
+                locFile.writeUTF(location.getDescription());
+                System.out.println("Writing location " + location.getLocationID() + " : " + location.getDescription());
+                System.out.println("Writing " + (location.getExits().size() - 1) + " exits.");
+                locFile.writeInt(location.getExits().size() - 1);
+                for (String direction : location.getExits().keySet()) {
+                    if (!direction.equalsIgnoreCase("Q")) {
+                        System.out.println("\t\t" + direction + "," + location.getExits().get(direction));
+                        locFile.writeUTF(direction);
+                        locFile.writeInt(location.getExits().get(direction));
+                    }
+                }
+            }
+        }
+
+
+*/
+//======================================================================================================================
+/*
 //writing data using buffered reader.Data will be written to files only when buffer is full
 //otherwise memory buffer will be used to write data.Useful for small data to be written
 
@@ -42,7 +88,7 @@ public class Locations implements Map<Integer, Location> {
 
         }
 
-
+*/
 
 
 /*===================================================================================================
@@ -93,59 +139,117 @@ writing data using file writer using try with resource
     }
 
     static {
+//reading using object input stream
+        try (ObjectInputStream locFile = new ObjectInputStream(
+                new BufferedInputStream(
+                        new FileInputStream(FilesName.BUFFERED_WRITTEN_LOCATION_OBJECT))
+        )) {
+            boolean eof = false;
+            while (!eof) {
+                try {
+                    Location location = (Location) locFile.readObject();
+                    LOCATIONS.put(location.getLocationID(), location);
+                    System.out.println("\t\t" + location.getLocationID() + ", " + location.getDescription() +
+                            ", Found Exists: " + location.getExits().size());
+                } catch (EOFException e) {
+                    eof = true;
+                }
+            }
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+
+
+//======================================================================================================================
+
+        //reading data using byte streams.EOFException is thrown when there is no input for the stream to read.
+        //we are catching it separately because we want to distinguish between EOF(subclass of IO) and IO exception
+        //we are using eof to get out of the loop.
+
+//        try (DataInputStream locFile = new DataInputStream(
+//                new BufferedInputStream(
+//                        new FileInputStream("locations.dat")))) {
+//
+//            boolean eof = false;
+//            while (!eof) {
+//                try {
+//                    Map<String, Integer> exits = new LinkedHashMap<>();
+//                    int locID = locFile.readInt();
+//                    String description = locFile.readUTF();
+//                    int numExits = locFile.readInt();
+//                    System.out.println("Read location " + locID + " : " + description);
+//                    System.out.println("Found " + numExits + " exits");
+//                    for (int i = 0; i < numExits; i++) {
+//                        String direction = locFile.readUTF();
+//                        int destination = locFile.readInt();
+//                        exits.put(direction, destination);
+//                        System.out.println("\t\t" + direction + "," + destination);
+//                    }
+//                    LOCATIONS.put(locID, new Location(locID, description, exits));
+//
+//                } catch (EOFException e) {
+//                    eof = true;
+//                }
+//
+//            }
+//        } catch (IOException io) {
+//            System.out.println("IO Exception");
+//        }
+//========================================================================================================================
+
 //using try with resource and getting rid of the scanner to read data from bufferedReader by directly using buffered
 //reader read line method to read single line and splitting it.
 
-        try (
-                BufferedReader locReader = new BufferedReader(new FileReader(FilesName.LOCATIONS));
-                BufferedReader directionsReader = new BufferedReader(new FileReader(FilesName.DIRECTIONS))) {
-
-            String locData;
-            String directionInput;
-
-            while ((locData = locReader.readLine()) != null) {
-                String[] locArray = locData.split(FilesName.DELIMITERS);
-
-
-                int locationId = Integer.parseInt(locArray[0]);
-                String description = locArray[1];
-
-                //test
-                System.out.println("Imported LocationId : " +
-                        locationId +
-                        " : " +
-                        description);
-
-                Map<String, Integer> tempExit = new HashMap<>();
-                LOCATIONS.put(locationId,
-                        new Location(
-                                locationId,
-                                description,
-                                tempExit
-                        ));
-            }
-
-
-            while ((directionInput = directionsReader.readLine()) != null) {
-
-                //using string split and taking the whole line and then splitting
-                String[] directionData = directionInput.split(FilesName.DELIMITERS);
-
-                int locationId = Integer.parseInt(directionData[0]);
-                String direction = directionData[1];
-                int destination = Integer.parseInt(directionData[2]);
-
-                Location location = LOCATIONS.get(locationId);
-                location.addExits(direction, destination);
-
-                //test
-                System.out.println(locationId + "," +
-                        direction + "," +
-                        destination);
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+//        try (
+//                BufferedReader locReader = new BufferedReader(new FileReader(FilesName.LOCATIONS));
+//                BufferedReader directionsReader = new BufferedReader(new FileReader(FilesName.DIRECTIONS))) {
+//
+//            String locData;
+//            String directionInput;
+//
+//            while ((locData = locReader.readLine()) != null) {
+//                String[] locArray = locData.split(FilesName.DELIMITERS);
+//
+//
+//                int locationId = Integer.parseInt(locArray[0]);
+//                String description = locArray[1];
+//
+//                //test
+//                System.out.println("Imported LocationId : " +
+//                        locationId +
+//                        " : " +
+//                        description);
+//
+//                Map<String, Integer> tempExit = new LinkedHashMap<>();
+//                LOCATIONS.put(locationId,
+//                        new Location(
+//                                locationId,
+//                                description,
+//                                tempExit
+//                        ));
+//            }
+//
+//
+//            while ((directionInput = directionsReader.readLine()) != null) {
+//
+//                //using string split and taking the whole line and then splitting
+//                String[] directionData = directionInput.split(FilesName.DELIMITERS);
+//
+//                int locationId = Integer.parseInt(directionData[0]);
+//                String direction = directionData[1];
+//                int destination = Integer.parseInt(directionData[2]);
+//
+//                Location location = LOCATIONS.get(locationId);
+//                location.addExits(direction, destination);
+//
+//                //test
+//                System.out.println(locationId + "," +
+//                        direction + "," +
+//                        destination);
+//            }
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
 
 
 //======================================================================================================================
